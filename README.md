@@ -20,7 +20,7 @@ the stack based implementation is more complex and therefore more a piece of fun
 # how to use
 
 enter the sudoko in the textfield and press import. after that press 'recursive and blocking' or 'run interactive' button to start processing.
-when a sudoko is imported use the mouse and hover the cells then the title will show the cell coordinates and the constrain dependencies. by clicking on an cell the possible values are shown below the board.
+after a sudoko is imported use the mouse and hover the cells then the title will show the cell coordinates and the constrain dependencies. by clicking on a single cell the possible values are shown below the board.
 
 
 # sudoko input format
