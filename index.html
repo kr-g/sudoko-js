@@ -1,0 +1,313 @@
+<html>
+
+<head>
+  <title>sudoko re-solver in javascript</title>
+</head>
+
+<body>
+
+  <a href="https://github.com/kr-g/sudoko-js" target="_blank">
+    <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_red_aa0000.png" alt="Fork me on GitHub">
+  </a>
+  
+  <div id='head'>sudoko re-solver</div>
+
+  <button onclick='nextStep()'>run recursive and blocking user interface</button>
+  <button onclick='runSingle()'>run interactive mode </button>
+  <button onclick='stopSingle()'>stop interactive</button> show board every <input id="display" type="text" value="100" size=4> cycles
+  <div id='info'></div>
+
+  <div id='main'>main block</div>
+
+  <button onclick='importData()'>import</button>
+
+  <div>
+    <textarea id='inp' cols='37' rows='11'>      
+        000 000 974
+        000 230 865
+        608 000 301
+        975 000 000
+        003 008 000
+        010 090 000
+        000 000 002
+        089 104 000
+        000 500 610
+    </textarea>
+  </div>
+
+  <script type="text/javascript">
+    function $id(id) {
+      return document.getElementById(id);
+    }
+
+    function parseInput(str) {
+      return str.replace(/\./gi, "0").replace(/[^0-9]*/gi, "");
+    }
+
+    function cell(x, y, val) {
+      return {
+        x: x,
+        y: y,
+        coord: {
+          x: x,
+          y: y
+        },
+        val: val,
+        oval: val,
+        styl: val > 0 ? 'bold' : 'normal',
+      };
+    }
+
+    function makeBoard(cr, dm) {
+      var bord = Array();
+      var p = 0;
+      for (var y = 0; y < dm; ++y) {
+        for (var x = 0; x < dm; ++x) {
+          bord.push(cell(x, y, parseInt(cr[p++])));
+        }
+      }
+      return bord;
+    }
+
+    function drawBoard(bord, dm, el) {
+      var str = "";
+      for (var y = 0; y < dm; ++y) {
+        str = str + "<div>| ";
+        for (var x = 0; x < dm; ++x) {
+          var title = "pos=> x" + x + "y" + y;
+          var bel = bord[x + y * dm];
+          title += " constraints=>";
+          bel.constr.all.forEach(e => title += " x" + e.x + "y" + e.y)
+          str = str + "<span onclick='($id(\"tail\").innerHTML=\"possible values= \"+JSON.stringify(hints(" + bel.x + "," + bel.y + ", board, dim)))' title='" + title + "' style='font-weight: " + bel.styl + ";'>" + bel.val + "</span> | ";
+        }
+        str = str + "</div>";
+      }
+      $id(el).innerHTML = str;
+    }
+
+    function addContrains(brd, dm) {
+      brd.forEach((e, i) => {
+        var depRow = Array();
+        for (var x = 0; x < dm; ++x) {
+          var bel = brd[x + e.y * dm];
+          if (x != e.x)
+            depRow.push(bel)
+        }
+        var depCol = Array();
+        for (var y = 0; y < dm; ++y) {
+          var bel = brd[e.x + y * dm];
+          if (e.y != y)
+            depCol.push(bel)
+        }
+        var depBlk = Array();
+        const xc = Math.trunc(e.x / d) * d;
+        const yc = Math.trunc(e.y / d) * d;
+        for (var y = yc; y < yc + d; ++y) {
+          for (var x = xc; x < xc + d; ++x) {
+            var bel = brd[x + y * dm];
+            if (e.x == x && e.y == y)
+              continue;
+            depBlk.push(bel)
+          }
+        }
+        var depAll = [...new Set([].concat(depRow, depCol, depBlk))]
+        e.constr = {
+          row: depRow,
+          col: depCol,
+          blk: depBlk,
+          all: depAll,
+        };
+      });
+    }
+    /*
+    ---
+    */
+    function hints(x, y, bord, dm) {
+      var bel = bord[x + y * dm];
+      if (bel.oval > 0 || bel.val > 0) {
+        return [];
+      }
+      var res = Array();
+      for (var i = 0; i <= dm; ++i) {
+        res.push(i);
+      }
+      bel.constr.all.forEach(e => res[e.val] = 0);
+      return res.filter(e => e > 0);
+    }
+
+    function valid(x, y, bord, dm, el) {
+      var constr = bord[x + y * dm].constr;
+      var rv = () => constr.row.map(e => e.val);
+      var cv = () => constr.col.map(e => e.val);
+      var bv = () => constr.blk.map(e => e.val);
+      return rv().indexOf(el) == -1 && cv().indexOf(el) == -1 && bv().indexOf(el) == -1;
+    }
+    //---
+    const d = 3;
+    const dim = d * d;
+    //---
+    function reset() {
+      cellsRaw = parseInput($id("inp").value);
+      $id("main").innerHTML = cellsRaw;
+      $id("info").innerHTML = "";
+      board = makeBoard(cellsRaw, dim);
+      addContrains(board, dim);
+      drawBoard(board, dim, "main");
+      loop = 0;
+      //$id("tail").innerHTML = new Date();
+    }
+    //---
+    findZero = (bord, dm) => bord.find(e => e.val == 0);
+    //--- run the search
+    function nextStep() {
+      var pn = findZero(board, dim);
+      var x = pn.x;
+      var y = pn.y;
+      var stadate = new Date();
+      var slv = solve(x, y, board, dim);
+      if (slv) {
+        var stpdate = new Date();
+        $id("info").innerHTML = "done with seach loops#" + loop + " in " + (stpdate - stadate) / 1000 + "sec";
+        drawBoard(board, dim, "main");
+      } else {
+        $id("main").innerHTML = "<span color='red'>no solution found</span>"
+      }
+    }
+
+    function solve(x, y, bord, dm) {
+      //
+      const p = x + y * dm;
+      //
+      var bel = bord[p];
+      const ht = hints(x, y, bord, dm);
+      console.log("solve " + x + " " + y + " " + ht);
+      //
+      for (var i = 0; i < ht.length; ++i) {
+        ++loop;
+        var tryv = ht[i];
+        if (valid(x, y, bord, dm, tryv)) {
+          //console.log("valid " + tryv + " @ " + x + " " + y + " " + ht);          
+          var t = bel.val;
+          bel.val = tryv;
+          var pn = findZero(bord, dm);
+          if (pn == null) {
+            console.log("done in " + loop);
+            return true;
+          }
+          if (solve(pn.x, pn.y, bord, dm)) {
+            return true;
+          }
+          //--- revert
+          bel.val = t;
+        }
+      }
+      return false;
+    }
+    /* ---
+    interactive mode with stack based implementation
+    ---*/
+    function importData() {
+      reset();
+      initSingleSolve();
+    }
+    // ---
+    importData();
+    var theTimeout;
+    var stadate;
+
+    function runSingle() {
+      if (!stadate) stadate = new Date();
+      clearTimeout(theTimeout);
+      var countDown = parseInt($id("display").value);
+      if (countDown == 0)
+        countDown = 100;
+      runSingleSolve();
+      if (loop % countDown == 0) {
+        $id("info").innerHTML = "loop# " + loop;
+        drawBoard(board, dim, "main");
+      }
+      if (backst.length > 0) {
+        theTimeout = setTimeout(function() {
+          runSingle();
+        }, 0);
+      }
+    }
+
+    function stopSingle() {
+      clearTimeout(theTimeout);
+      stadate = null;
+      $id("info").innerHTML = "loop# " + loop;
+      drawBoard(board, dim, "main");
+    }
+    // flat search using a stack
+    var backst;
+
+    function initSingleSolve() {
+      clearTimeout(theTimeout);
+      stadate = null;
+      backst = Array();
+      var pn = findZero(board, dim);
+      var x = pn.x;
+      var y = pn.y;
+      var bel = board[x + y * dim];
+      const ht = hints(x, y, board, dim);
+      pu(x, y, board, dim, bel, ht, 0)
+    }
+
+    function pu(x, y, bord, dm, bel, ht, idx, tryvtmp) {
+      console.log("push " + JSON.stringify([x, y, dm, ht, idx]));
+      backst.push([x, y, bord, dm, bel, ht, idx]);
+    }
+
+    function runSingleSolve() {
+      if (backst.length > 0) {
+        [x, y, bord, dm, bel, ht, idx, tryvtmp] = backst.pop();
+        var res = solveSingle(x, y, bord, dm, bel, ht, idx);
+        if (res) {
+          $id("info").innerHTML = "done in " + (new Date() - stadate) / 1000 + "sec and loop#" + loop;
+          drawBoard(bord, dm, "main");
+          backst = [];
+        } else {
+          if (backst.length == 0) {
+            $id("info").innerHTML = "no solution found";
+          }
+        }
+      }
+    }
+
+    function solveSingle(x, y, bord, dm, bel, ht, idx) {
+      console.log("pop " + JSON.stringify([x, y, dm, ht, idx]));
+      //
+      const p = x + y * dm;
+      //
+      var i = idx;
+      if (ht.length > 0 && i < ht.length) {
+        ++loop;
+        var tryv = ht[i];
+        if (valid(x, y, bord, dm, tryv)) {
+          //console.log("valid " + tryv + " @ " + x + " " + y + " " + ht);          
+          var t = bel.val;
+          bel.val = tryv;
+          var pn = findZero(bord, dm);
+          if (pn == null) {
+            console.log("done in " + loop);
+            return true;
+          }
+          pu(x, y, bord, dm, bel, ht, ++i, 0);
+          pu(pn.x, pn.y, bord, dm, pn, hints(pn.x, pn.y, bord, dm), 0);
+          return;
+        }
+        // push next try ro stack
+        bel.val = tryvtmp;
+        pu(x, y, bord, dm, bel, ht, ++i, 0);
+        return;
+      }
+      //--- revert
+      console.log("reverted2");
+      bel.val = 0;
+    }
+  </script>
+
+</body>
+
+</html>
