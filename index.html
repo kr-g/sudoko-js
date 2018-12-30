@@ -157,8 +157,14 @@
       cellsRaw = parseInput($id("inp").value);
       $id("main").innerHTML = cellsRaw;
       $id("info").innerHTML = "";
+      
+      if (typeof board !== 'undefined') { 
+        // clean up last run  
+        board.forEach(e => e.constr = e.constr.row = e.constr.col = e.constr.blk = null);
+      }
       board = makeBoard(cellsRaw, dim);
       addContrains(board, dim);
+      
       drawBoard(board, dim, "main");
       loop = 0;
       //$id("tail").innerHTML = new Date();
