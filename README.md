@@ -5,7 +5,7 @@ a draft - plain html and pure javascript implementation of sudoko resolver.
 there are two implemenations as of now
 
 - recursive - with a blocking user interface, but it logs to the browser console (open javascript tools of your browser to see). it will solve most sudoko's (normal difficult) within a few seconds - using javascript - not too bad :-)
-- stack based - (instead of recursion) and with an interactive loop where the board is painted on a regular base as html. this one much slower then the recursive one since it runs in the browser loop. you can see the stack operations and follow the search path also in the console log of your browser.
+- stack based - (instead of recursion) and with an interactive loop where the board is painted on a regular base as html. this one is __much slower__ then the recursive one since it runs in the browser loop. you can see the stack operations and follow the search path also in the console log of your browser.
 
 
 # how it works
