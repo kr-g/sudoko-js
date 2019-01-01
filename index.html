@@ -160,7 +160,7 @@
       
       if (typeof board !== 'undefined') { 
         // clean up last run  
-        board.forEach(e => e.constr = e.constr.row = e.constr.col = e.constr.blk = null);
+        board.forEach(e => e.constr = e.constr.row = e.constr.col = e.constr.blk = e.constr.all = null);
       }
       board = makeBoard(cellsRaw, dim);
       addContrains(board, dim);
